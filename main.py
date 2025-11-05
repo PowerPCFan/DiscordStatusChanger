@@ -1,74 +1,81 @@
 import requests
-import time
-import json
+import typer
+from typing import NamedTuple, Union, Any
+from rich.console import Console
+
+console = Console(highlight=False)
+app = typer.Typer(
+    add_completion=False,
+    help="A simple CLI tool to change your Discord status.",
+    no_args_is_help=True
+)
+commands = typer.Typer()
+app.add_typer(commands, name="")
 
 
-def read_statuses(file_name):
-    with open(file_name, "r", encoding="utf-8") as file:
-        return [line.strip() for line in file.readlines()]
+class UserInfo(NamedTuple):
+    username: Union[str, None]
+    is_valid_token: bool
 
 
-def get_user_info(token):
-    r = requests.get("https://discord.com/api/v10/users/@me", headers={'authorization': token})
-    if r.status_code == 200:
-        user_info = r.json()
-        return user_info["username"] + "#" + user_info["discriminator"], True
+def get_user_info(token: str) -> UserInfo:
+    response = requests.get("https://discord.com/api/v10/users/@me", headers={'authorization': token})
+
+    if response.ok:
+        user_info: dict[str, Any] = response.json()
+        return UserInfo(username=user_info["username"], is_valid_token=True)
     else:
-        return "Token invalid", False
+        return UserInfo(username=None, is_valid_token=False)
 
 
-def change_status(token, message):
-    header = {
-        'authorization': token
-    }
+def change_status(token: str, status: str) -> int:
+    current_status: dict[str, Any] = requests.get(
+        "https://discord.com/api/v8/users/@me/settings",
+        headers={"authorization": token}
+    ).json()
 
-    current_status = requests.get("https://discord.com/api/v8/users/@me/settings", headers=header).json()
+    custom_status: dict[str, Any] = current_status.get("custom_status") or {}
+    custom_status["text"] = status
 
-    custom_status = current_status.get("custom_status", {})
-    if custom_status is None:
-        custom_status = {}
-    custom_status["text"] = message
-
-    jsonData = {
-        "custom_status": custom_status,
-        "activities": current_status.get("activities", [])
-    }
-
-    r = requests.patch("https://discord.com/api/v8/users/@me/settings", headers=header, json=jsonData)
-    return r.status_code
-
-
-def load_config():
-    with open("config.json", "r") as file:
-        return json.load(file)
+    response = requests.patch(
+        "https://discord.com/api/v8/users/@me/settings",
+        headers={"authorization": token},
+        json={
+            "custom_status": custom_status,
+            "activities": current_status.get("activities") or []
+        }
+    )
+    return response.status_code
 
 
-def color_text(text, color_code):
-    return f"\033[{color_code}m{text}\033[0m"
+@commands.command(
+    name="change-status",
+    help="Change your Discord status."
+)
+def change_status_command(
+    token: str = typer.Option(..., help="Your Discord token"),
+    status: str = typer.Option(..., help="The string to set as your Discord status")
+):
+
+    if (length := len(status)) > 128:
+        amount_over = length - 128
+        console.print(
+            "[bold red]Error:[/bold red] "
+            f"Your status is [bold yellow]{length}[/bold yellow] characters long, which is "
+            f"[bold yellow]{amount_over}[/bold yellow] {'characters' if amount_over != 1 else 'character'} over "
+            "the limit. Please shorten it to [bold yellow]128[/bold yellow] characters or less."
+        )
+        return
+
+    user_info = get_user_info(token)
+
+    if not user_info.is_valid_token:
+        console.print("Invalid token.")
+        return
+
+    console.print(f"Status changed for [cyan]{user_info.username}[/cyan]: [yellow]'{status}'[/yellow]")
+    change_status(token, status)
 
 
-config = load_config()
-discord_token = config["discord_token"]
-
-status_count = 0
-emoji_count = 0
-
-while True:
-    user_info, is_valid_token = get_user_info(discord_token)
-    statuses = read_statuses("text.txt")
-    for status in statuses:
-        time_formatted = color_text(time.strftime("%I:%M %p:"), "35")
-        if is_valid_token:
-            token_color_code = "32"
-        else:
-            token_color_code = "31"
-        token_masked = f"{discord_token[:8]}..."
-        token_info = f"{token_masked} | {user_info}"
-        token_colored = color_text(token_info, token_color_code)
-        status_colored = color_text(status, "35")
-
-        print(f"{time_formatted} Status changed for: {token_colored}. New status: {status_colored}")
-        change_status(discord_token, status)
-        status_count += 1
-        emoji_count += 1
-
+if __name__ == "__main__":
+    app()

@@ -1,7 +1,6 @@
 import requests
 import time
 import json
-import os
 
 
 def read_statuses(file_name):
@@ -39,10 +38,6 @@ def change_status(token, message):
     return r.status_code
 
 
-def clear_console():
-    os.system('cls' if os.name == 'nt' else 'clear')
-
-
 def load_config():
     with open("config.json", "r") as file:
         return json.load(file)
@@ -53,16 +48,13 @@ def color_text(text, color_code):
 
 
 config = load_config()
-token = config["token"]
-clear_enabled = config["clear_enabled"]
-clear_interval = config["clear_interval"]
-sleep_interval = config["sleep_interval"]
+discord_token = config["discord_token"]
 
 status_count = 0
 emoji_count = 0
 
 while True:
-    user_info, is_valid_token = get_user_info(token)
+    user_info, is_valid_token = get_user_info(discord_token)
     statuses = read_statuses("text.txt")
     for status in statuses:
         time_formatted = color_text(time.strftime("%I:%M %p:"), "35")
@@ -70,15 +62,13 @@ while True:
             token_color_code = "32"
         else:
             token_color_code = "31"
-        token_masked = token[:10] + "*****"
+        token_masked = f"{discord_token[:8]}..."
         token_info = f"{token_masked} | {user_info}"
         token_colored = color_text(token_info, token_color_code)
         status_colored = color_text(status, "35")
 
         print(f"{time_formatted} Status changed for: {token_colored}. New status: {status_colored}")
-        change_status(token, status)
+        change_status(discord_token, status)
         status_count += 1
         emoji_count += 1
-        time.sleep(sleep_interval)
-        if clear_enabled and status_count % clear_interval == 0:
-            clear_console()
+

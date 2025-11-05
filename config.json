@@ -1,6 +1,3 @@
 {
-  "token": "PUT-YOUR-TOKEN-HERE",
-  "clear_enabled": true,
-  "clear_interval": 15,
-  "sleep_interval": 3
+    "discord_token": "PUT-YOUR-TOKEN-HERE"
 }

@@ -2,7 +2,6 @@ import requests
 import time
 import json
 import os
-from colorama import Fore
 
 
 def read_statuses(file_name):
@@ -53,16 +52,6 @@ def color_text(text, color_code):
     return f"\033[{color_code}m{text}\033[0m"
 
 
-banner = f"""                           ┌─                                                           ─┐
-                               {Fore.MAGENTA}┬  ┬┌─┐┬  ┌─┐  {Fore.LIGHTBLACK_EX}┌─┐┌┬┐┌─┐┌┬┐┬ ┬┌─┐  ┌─┐┬ ┬┌─┐┌┐┌┌─┐┌─┐┬─┐
-                               {Fore.MAGENTA}└┐┌┘├┤ │  │ │  {Fore.LIGHTBLACK_EX}└─┐ │ ├─┤ │ │ │└─┐  │  ├─┤├─┤││││ ┬├┤ ├┬┘
-                               {Fore.MAGENTA} └┘ └─┘┴─┘└─┘  {Fore.LIGHTBLACK_EX}└─┘ ┴ ┴ ┴ ┴ └─┘└─┘  └─┘┴ ┴┴ ┴┘└┘└─┘└─┘┴└─
-                           └─                                                           ─┘
-
-"""  # noqa
-
-print(banner)
-
 config = load_config()
 token = config["token"]
 clear_enabled = config["clear_enabled"]
@@ -86,7 +75,7 @@ while True:
         token_colored = color_text(token_info, token_color_code)
         status_colored = color_text(status, "35")
 
-        print(f"{time_formatted} {Fore.LIGHTBLACK_EX}Status changed for: \033[34m{token_colored}\033[90m. New status: \033[34m{status_colored}\033[0m.{Fore.LIGHTBLACK_EX}")  # noqa: E501
+        print(f"{time_formatted} Status changed for: {token_colored}. New status: {status_colored}")
         change_status(token, status)
         status_count += 1
         emoji_count += 1
